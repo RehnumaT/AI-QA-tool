@@ -1,0 +1,44 @@
+---
+description: "Expand approved acceptance criteria into positive, negative, boundary, and cross-role test scenarios, each risk-tagged. Use after a test plan is approved and before test cases are written, or whenever a tester asks \"what scenarios am I missing for this feature\"."
+---
+
+# test-scenario-designer
+
+## When this fires
+
+- "Design scenarios for the approved ACs on PROJ-49"
+- "What scenarios am I missing for password reset?"
+- Chained automatically after `test-plan-generator`'s plan is approved.
+
+## Workflow
+
+1. **Take the approved AC list** (from the test plan, or pasted directly).
+2. **For each AC, generate scenarios across four lenses:**
+   - **Positive** — the AC satisfied via its stated happy path
+   - **Negative** — invalid input, denied permission, failed precondition
+   - **Boundary** — empty/zero/one/max/just-over-max
+   - **Cross-role** — same action performed by each distinct role/permission level named in the requirement
+3. **Risk-tag each scenario**: `High` (data loss, security, payment, auth), `Medium` (core functionality, common path), `Low` (cosmetic, rare path) — same tagging vocabulary `test-plan-generator` already uses, so downstream priority mapping is a straight lookup, not a re-judgment.
+4. **De-duplicate against generic edge cases** already implied by the domain (e.g. don't re-list "empty input" three times across three ACs if it's genuinely the same scenario).
+
+## Output contract
+
+```markdown
+## Scenarios — AC-2: "User can reset password via email link"
+
+| Lens | Scenario | Risk |
+|---|---|---|
+| Positive | Valid email receives reset link, link resets password | Medium |
+| Negative | Unregistered email — no account-enumeration leak in the response | High |
+| Negative | Expired reset link is rejected with a clear message | Medium |
+| Boundary | Reset link used twice — second use rejected | Medium |
+| Cross-role | Admin-initiated reset on behalf of a user follows the same link-expiry rule | Medium |
+```
+
+## Guardrails
+
+| Rule | Why |
+|---|---|
+| Every scenario cites its source AC | Keeps traceability intact into test-case-writer |
+| Don't invent roles not named in the requirement | Avoid scope creep; flag "is there an admin variant?" as a question instead |
+| Security/auth-adjacent negative scenarios default to High risk | Under-tagging these is the costliest miss |

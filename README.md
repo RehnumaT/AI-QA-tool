@@ -13,6 +13,14 @@ A gamified QA workspace for testers and developers, built with React + Vite. It 
 
 All "AI" suggestions are generated locally with deterministic heuristics — no API key or network calls required, so the app runs entirely standalone.
 
+## STLC Skill Pack
+
+This repo also ships [`/skills`](skills/README.md) — a separate deliverable from the app above: 14 `SKILL.md` agent skills covering the full software testing lifecycle (requirement analysis → test planning → test design → test case development → execution → defect management → closure), for use with Claude Code, Cline, GitHub Copilot, Cursor, or Windsurf.
+
+Where the app is a workspace *you* use, the skill pack is instructions an *agent* follows — e.g. "create a test plan for PROJ-49" fetches a live Jira/GitHub/Linear ticket and drafts a review-ready plan. It includes real tracker integrations (not stubs), working scripts for test data generation and execution tracking, and a generator that derives Copilot/Cursor/Windsurf formats from the same source file instead of hand-duplicating each skill per tool.
+
+See [`skills/README.md`](skills/README.md) for the full roadmap and skill list.
+
 ## Tech stack
 
 - React 18 + Vite

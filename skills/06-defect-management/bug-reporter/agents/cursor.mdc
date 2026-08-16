@@ -1,0 +1,46 @@
+---
+description: "Turn a failure into a clean, reproducible bug report. Use when a tester says \"file a bug for this\", \"write up this defect\", or describes something broken and wants it documented properly."
+alwaysApply: false
+---
+
+# bug-reporter
+
+## When this fires
+
+- "File a bug for TC-031's failure"
+- A `fail` result recorded by `test-execution-tracker`
+- Any freeform "this is broken: ..." description that needs writing up properly
+
+## Workflow
+
+1. **Gather the facts.** If this follows a failed test case, pull steps/expected/actual straight from the case and the execution log — don't re-derive repro steps from a vague description when a precise one already exists.
+2. **Fill the template** (`template/bug-report-template.md`). Field names deliberately match the `bug` document shape already used by AI-QA-tool's own editors (`stepsToReproduce`, `expectedResult`, `actualResult`, `environment`, `severity`, `priority`) — a drafted report pastes straight into that app's Bug Report editor with no relabeling.
+3. **Score completeness** — same five required fields the app's own `analyzeBug()` heuristic checks (title, steps to reproduce, expected result, actual result, environment). Report the % and name what's missing, don't submit an incomplete report silently.
+4. **Suggest severity/priority** from language signals in the description (crash/data-loss/security → Critical/P0; broken/error/regression → High/P1; typo/cosmetic → Low/P3; otherwise Medium/P2) — same signal categories the app's heuristic uses, so a human reviewing both gets a consistent read.
+5. **File it** via the configured tracker (`../../_shared/trackers/github.sh create`, `jira.sh`, or `linear.sh`) if one is set up; otherwise output the markdown report for manual filing.
+
+## Output contract
+
+```markdown
+## Bug: Expired reset link redirects to login instead of showing an error
+
+**Severity:** High **Priority:** P1
+**Environment:** staging, Chrome 128, desktop
+**Steps to reproduce:**
+1. Navigate to a reset link older than 24h
+2. Observe the redirect
+
+**Expected result:** Message states the link expired, offers to request a new one
+**Actual result:** Silently redirects to /login with no message
+
+**Completeness:** 100% (5/5 required fields present)
+**Suggested severity/priority reasoning:** "silently redirects" + regression-pattern language → High/P1
+```
+
+## Guardrails
+
+| Rule | Why |
+|---|---|
+| Never file with a completeness score below 100% without flagging what's missing | An incomplete report wastes a developer's time reproducing it |
+| Severity/priority are suggestions, not final | A human confirms triage, same as every other STLC gate in this pack |
+| Reuse steps/expected/actual from a failed test case verbatim when available | Prevents drift between what was tested and what's reported |
