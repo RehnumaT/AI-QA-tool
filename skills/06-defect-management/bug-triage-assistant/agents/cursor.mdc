@@ -1,0 +1,43 @@
+---
+description: "Take a defect backlog, group likely duplicates, propose severity, and route each to an owner/area. Use when a tester or lead asks \"help me triage this backlog\" or \"are any of these bugs duplicates\"."
+alwaysApply: false
+---
+
+# bug-triage-assistant
+
+## When this fires
+
+- "Triage this week's bug backlog"
+- "Are TC-031's failure and BUG-118 the same underlying issue?"
+- Weekly/periodic backlog grooming.
+
+## Workflow
+
+1. **Ingest the backlog** — a list of bug reports/tickets (title, description, environment, reported-by).
+2. **Group duplicate candidates** by comparing title/description similarity and shared environment + repro pattern — flag as `Likely duplicate` (same root symptom, same area) vs `Related, not duplicate` (shares a symptom but different trigger). Never auto-merge; only propose.
+3. **Propose severity** for any bug missing it, using the same signal categories as `bug-reporter` (crash/data-loss/security → Critical; broken/regression → High; cosmetic → Low; else Medium) so triage stays consistent with how bugs were filed.
+4. **Route by area** — map each bug to a component/owner if a components list is available (from the tracker's `components`/`labels` field); otherwise flag `Unrouted — needs owner`.
+5. **Output a triage table**, sorted severity-first, so the highest-impact items surface at the top regardless of report order.
+
+## Output contract
+
+```markdown
+## Triage — 2026-08-16 backlog (14 bugs)
+
+| Bug | Severity | Duplicate of | Route | Note |
+|---|---|---|---|---|
+| BUG-118 | Critical | — | Payments team | Charged twice on retry |
+| BUG-121 | High | BUG-118 (likely dup) | Payments team | Same retry path, different error copy |
+| BUG-130 | Low | — | Unrouted | Cosmetic spacing issue, no component tag |
+
+**Duplicate candidates to confirm:** BUG-118 / BUG-121
+**Unrouted:** BUG-130 (no component/label present)
+```
+
+## Guardrails
+
+| Rule | Why |
+|---|---|
+| Never auto-close or auto-merge a proposed duplicate | Only a human confirms two reports are truly the same root cause |
+| Severity proposals are suggestions, marked as such | Keeps this consistent with every other suggest-don't-decide gate in the pack |
+| Say "Unrouted" rather than guessing an owner | A wrong guess is worse than an honest gap — it delays real triage |

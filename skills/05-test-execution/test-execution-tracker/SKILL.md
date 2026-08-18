@@ -1,0 +1,58 @@
+---
+name: test-execution-tracker
+description: >-
+  Log pass/fail/blocked/skipped per test case during a run and report live
+  completion % and pass rate, backed by a real stateful script rather than
+  a described process. Use when a tester says "mark TC-014 as failed" or
+  "what's our completion % on this run".
+license: MIT
+metadata:
+  author: Rehnuma Tarannum
+  pack: stlc-skill-pack
+  phase: "05-test-execution"
+---
+
+## When this fires
+
+- "Mark TC-014 as failed, note: size limit not enforced"
+- "What's the completion % on the regression-2026-08-16 run?"
+- During/after `automation-script-generator` or manual execution, to record results.
+
+## Workflow
+
+1. **Record each result as it happens**, don't batch from memory at the end — the log is the source of truth, not the conversation:
+   ```bash
+   python3 scripts/track_execution.py --run regression-2026-08-16 --case TC-014 --result pass
+   python3 scripts/track_execution.py --run regression-2026-08-16 --case TC-031 --result fail --note "size limit not enforced"
+   ```
+2. **Valid results only**: `pass`, `fail`, `blocked`, `skipped`. `blocked` (can't execute — env/dependency down) is distinct from `fail` (executed, didn't meet expected result) — don't conflate them, they drive different follow-up actions.
+3. **Report the rollup on request**, read straight from the log, never estimated from memory:
+   ```bash
+   python3 scripts/track_execution.py --run regression-2026-08-16 --summary
+   ```
+4. **Surface failed cases immediately** in the response — the `failedCases` list from the summary is what feeds `bug-reporter` next.
+
+## Output contract
+
+```json
+{
+  "run": "regression-2026-08-16",
+  "total": 9,
+  "byResult": {"pass": 7, "fail": 1, "blocked": 1, "skipped": 0},
+  "completionPct": 100.0,
+  "passRatePct": 77.8,
+  "failedCases": ["TC-031"]
+}
+```
+
+## Guardrails
+
+| Rule | Why |
+|---|---|
+| Never report completion % from memory — always re-run `--summary` | The log is the source of truth; a remembered count drifts as more results come in |
+| `blocked` is never silently counted as `fail` or `pass` | Blocked cases need environment/dependency follow-up, not a defect |
+| One log per run ID, never overwritten wholesale | Preserves history across a multi-day execution cycle |
+
+## Handoff
+
+Any `fail` result feeds `bug-reporter` (phase 06) directly — the case's steps and expected/actual are already on hand, no re-deriving repro steps from scratch.

@@ -1,0 +1,48 @@
+---
+description: "Turn an API endpoint or contract (OpenAPI spec, curl example, or plain description) into a coverage matrix spanning happy path, schema validation, auth, negative, and boundary cases. Use when a tester says \"design API tests for this endpoint\" or hands over a spec/contract."
+---
+
+# api-test-designer
+
+## When this fires
+
+- "Design tests for POST /orders"
+- Given an OpenAPI/Swagger spec fragment or a curl example
+- "What API-level tests am I missing before this ships?"
+
+## Workflow
+
+1. **Extract the contract**: method, path, required/optional params, request/response schema, auth requirement, documented status codes. If given only a curl example, infer the schema from it and flag inferred fields as assumptions.
+2. **Build the coverage matrix** across five categories:
+   - **Happy path** — valid request per the contract, expect the documented success status + schema
+   - **Schema validation** — missing required field, wrong type, extra unexpected field, malformed JSON
+   - **Auth** — no token, expired token, wrong scope/role, token for a different tenant/account
+   - **Negative** — invalid IDs (404), conflicting state (409), rate limit (429) if documented
+   - **Boundary** — empty arrays/strings, max-length fields, pagination edges (page 0, last page, page beyond range)
+3. **Tag each row with expected status code** — this is the one place in the pack where the expected result is a concrete, checkable value, not prose.
+
+## Output contract
+
+```markdown
+## API Test Matrix — POST /orders
+
+| Category | Case | Expected status |
+|---|---|---|
+| Happy path | Valid order with in-stock items | 201 |
+| Schema | Missing `items` field | 400 |
+| Schema | `quantity` as string instead of int | 400 |
+| Auth | No Authorization header | 401 |
+| Auth | Valid token, wrong tenant's order | 403 |
+| Negative | Order references a deleted product ID | 404 |
+| Negative | Duplicate idempotency key | 409 |
+| Boundary | `items` array with 0 entries | 400 |
+| Boundary | `items` array at documented max length | 201 |
+```
+
+## Guardrails
+
+| Rule | Why |
+|---|---|
+| Never assert an undocumented status code as fact | If the contract doesn't specify 429 behavior, list it as an open question, not a row |
+| Idempotency and duplicate-write cases are mandatory for any POST/PUT | Cheapest place to catch a costly production bug |
+| Auth cross-tenant case is mandatory whenever the resource is scoped to an account/org | Most common real-world authz miss |
